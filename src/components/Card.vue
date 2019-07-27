@@ -22,7 +22,11 @@ export default {
     cardIndex: {
       type: Number,
       default: -1,
-    }
+    },
+    // isDraggable: {
+    //   type: Boolean,
+    //   default: false,
+    // }
   },
   data() {
     return {
@@ -30,9 +34,11 @@ export default {
   },
   methods: {
     drag() {
+      // if (this.isDraggable) {
       this.$emit('drag', this.cardId, this.cardIndex, this.columnIndex);
+      // };
     },
-  }
+  },
 }
 </script>
 

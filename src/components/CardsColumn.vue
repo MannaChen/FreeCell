@@ -1,5 +1,6 @@
 <template>
-  <div class="cards-wrap"
+  <div
+    class="cards-wrap"
     @drop="onDropCardColumn"
     @dragover="allowDrop"
   >

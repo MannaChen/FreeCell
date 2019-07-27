@@ -9,10 +9,15 @@
           <div
             v-for="(cardId, i) in tempDeck" :key="i"
             class="block"
-            @drop="onDropTempBlock(i)"
+            @drop="onDropTempBlock(i, target.columnIndex)"
             @dragover="allowDrop"
           >
-            <card v-if="cardId" :cardId="cardId" />
+            <card
+              v-if="cardId"
+              :cardId="cardId"
+              draggable
+              @drag="onDragCard(cardId, i, tempDeckColumnIndex)"
+            />
           </div>
         </div>
         <div class="finish-deck">
@@ -22,7 +27,11 @@
             @drop="onDropFinishBlock(i)"
             @dragover="allowDrop"
           >
-            <card v-if="cardId" :cardId="cardId" />
+            <card
+              v-if="cardId"
+              :cardId="cardId"
+              :draggable="false"
+            />
           </div>
         </div>
       </div>
@@ -38,8 +47,9 @@
               :cardId="cardId"
               :columnIndex="columnIndex"
               :cardIndex="cardIndex"
+              :draggable="isDraggable(cardIndex, columnIndex)"
               :key="cardId"
-              @drag="onDragSingleCard"
+              @drag="onDragCard"
             />
           </cards-column>
         </div>
@@ -62,6 +72,8 @@ export default {
       // basic setting
       cardType: ['spade', 'heart', 'diamond', 'club'],
       mainDeckCardNum: [7, 7, 7, 7, 6, 6, 6, 6,],
+      tempDeckColumnIndex: 8,
+      finishDeckColumnIndex: 9,
 
       // per game setting
       shuffledCards: [],
@@ -69,10 +81,13 @@ export default {
       tempDeck: ['', '', '', ''],
       finishDeck: ['', '', '', ''],
 
-      // per move
-      dragTargetCardId: '',
-      dragTargetCardIndex: '',
-      dragTargetColumnIndex: '',
+      // 拖曳標的
+      target: {
+        cardId: '',
+        cardIndex: 0,
+        columnIndex: 0,
+        children: [],
+      },
       timer: 0,
       screenshot: [],
     }
@@ -81,28 +96,53 @@ export default {
   },
   methods: {
     // main game logic
-    onDragSingleCard(cardId, cardIndex, columnIndex) {
-      this.dragTargetCardId = cardId;
-      this.dragTargetCardIndex = cardIndex;
-      this.dragTargetColumnIndex = columnIndex;
-    },
-    onDropTempBlock(i) {
-      if (this.tempDeck[i]) return;
+    onDragCard(cardId, cardIndex, columnIndex) {
 
-      this.$set(this.tempDeck, i, this.dragTargetCardId);
-      this.mainDeck[this.dragTargetColumnIndex].pop();
+      this.target.cardId = cardId;
+      this.target.cardIndex = cardIndex;
+      this.target.columnIndex = columnIndex;
+
+      if (columnIndex >= 8) return;
+
+      let i = cardIndex;
+      const column = this.mainDeck[columnIndex];
+      // 是否有子牌
+      while (column[i + 1] !== undefined) {
+        this.target.children.push(column[i + 1]);
+        i += 1;
+      } 
+    },
+    onDropTempBlock(i, columnIndex) {
+      if (this.tempDeck[i]) return;
+      if (this.target.children.length >= 1) return;
+
+      this.$set(this.tempDeck, i, this.target.cardId);
+      if (this.target.columnIndex === 8) {
+        this.tempDeck[this.target.cardIndex] = '';
+      } else if (this.target.columnIndex <= 7) {
+        this.mainDeck[this.target.columnIndex].pop();
+      }
+      this.resetTarget();
     },
     onDropFinishBlock(i) {
+
+      if (this.target.children.length >= 1) return;
+
       const card1 = this.finishDeck[i];
-      const card2 = this.dragTargetCardId
+      const card2 = this.target.cardId
 
       if (
         (this.isSameCardType(card1, card2) && this.isAscendentCardNumber(card1, card2))
-        || (this.dragTargetCardId.split('-')[1] === '1' && !this.finishDeck[i])
+        || (this.target.cardId.split('-')[1] === '1' && !this.finishDeck[i])
       ) {
-        this.$set(this.finishDeck, i, this.dragTargetCardId);
-        this.mainDeck[this.dragTargetColumnIndex].pop();
+        this.$set(this.finishDeck, i, this.target.cardId);
+        if (this.target.columnIndex === 8) {
+          this.tempDeck[this.target.cardIndex] = '';
+        } else if (this.target.columnIndex <= 7) {
+          this.mainDeck[this.target.columnIndex].pop();
+        }
       };
+      this.resetTarget();
     },
     onDropCardColumn(columnIndex) {
       // 取得最末牌 card id
@@ -111,12 +151,23 @@ export default {
       
       // 判定不同顏色、數字小一號
       if (
-        this.isDiffCardColor(this.dragTargetCardId, endCardId)
-        && this.isDescentCardNumber(endCardId, this.dragTargetCardId)
+        this.isDiffCardColor(this.target.cardId, endCardId)
+        && this.isDescentCardNumber(endCardId, this.target.cardId)
         ) {
-        this.mainDeck[this.dragTargetColumnIndex].pop();
-        this.mainDeck[columnIndex].push(this.dragTargetCardId);
+          if (this.target.columnIndex === 8) {
+            this.tempDeck[this.target.cardIndex] = '';
+          } else if (this.target.columnIndex <= 7) {
+            this.mainDeck[this.target.columnIndex].splice(this.target.cardIndex);
+          }
+        this.mainDeck[columnIndex].push(this.target.cardId, ...this.target.children);
       }
+      this.resetTarget();
+    },
+    resetTarget() {
+      this.target.cardId = '';
+      this.target.cardIndex = 0;
+      this.target.columnIndex = 0;
+      this.target.children = [];
     },
 
     // new game
@@ -155,6 +206,21 @@ export default {
     },
 
     // some utils methods
+    isDraggable(cardIndex, columnIndex) {
+      
+      let i = cardIndex;
+      const column = this.mainDeck[columnIndex];
+      // 是否有子牌
+      while (column[i + 1] !== undefined) {
+        if (this.isDiffCardColor(column[i], column[i + 1]) && this.isDescentCardNumber(column[i], column[i + 1])) {
+          i += 1;
+        } else {
+          return false;
+          break;
+        }
+      }
+      return true;
+    },
     isSameCardType(a, b) {
       return a.split('-')[0] === b.split('-')[0]
     },
