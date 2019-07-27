@@ -1,7 +1,8 @@
 <template>
   <div id="app">
     <section class="panel">
-      <button @click="onClickNewGame">New Game</button>
+      <button class="button" @click="onClickNewGame">Restart</button>
+      <button class="button" @click="onClickUndo">Undo</button>
     </section>
     <section class="deck">
       <div class="top-deck">
@@ -170,7 +171,7 @@ export default {
       this.target.children = [];
     },
 
-    // new game
+    // panel click
     onClickNewGame() {
       // reset
       this.mainDeck = [[], [], [], [], [], [], [], []];
@@ -203,6 +204,9 @@ export default {
           this.mainDeck[0].push(this.shuffledCards[i]);
         }
       }
+    },
+    onClickUndo() {
+
     },
 
     // some utils methods
@@ -266,5 +270,6 @@ export default {
 <style lang="scss">
 @import '@/scss/reset.scss';
 @import '@/scss/app.scss';
+@import '@/scss/button.scss';
 
 </style>
