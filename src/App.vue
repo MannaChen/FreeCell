@@ -148,19 +148,30 @@ export default {
     onDropCardColumn(columnIndex) {
       // 取得最末牌 card id
       const length = this.mainDeck[columnIndex].length;
-      const endCardId = this.mainDeck[columnIndex][length - 1];
+
+      if (length > 0) {
+        const endCardId = this.mainDeck[columnIndex][length - 1];
       
-      // 判定不同顏色、數字小一號
-      if (
-        this.isDiffCardColor(this.target.cardId, endCardId)
-        && this.isDescentCardNumber(endCardId, this.target.cardId)
-        ) {
-          if (this.target.columnIndex === 8) {
-            this.tempDeck[this.target.cardIndex] = '';
-          } else if (this.target.columnIndex <= 7) {
-            this.mainDeck[this.target.columnIndex].splice(this.target.cardIndex);
-          }
-        this.mainDeck[columnIndex].push(this.target.cardId, ...this.target.children);
+        // 判定不同顏色、數字小一號
+        if (
+          this.isDiffCardColor(this.target.cardId, endCardId)
+          && this.isDescentCardNumber(endCardId, this.target.cardId)
+          ) {
+					  if (this.target.columnIndex === 8) {
+              this.tempDeck[this.target.cardIndex] = '';
+            } else if (this.target.columnIndex <= 7) {
+              this.mainDeck[this.target.columnIndex].splice(this.target.cardIndex);
+            }
+          this.mainDeck[columnIndex].push(this.target.cardId, ...this.target.children);
+        }
+      } else if (length === 0 && this.target.cardId.includes('13')){
+				console.log('13');
+				if (this.target.columnIndex === 8) {
+					this.tempDeck[this.target.cardIndex] = '';
+				} else if (this.target.columnIndex <= 7) {
+					this.mainDeck[this.target.columnIndex].splice(this.target.cardIndex);
+				}
+  			this.mainDeck[columnIndex].push(this.target.cardId, ...this.target.children);
       }
       this.resetTarget();
     },

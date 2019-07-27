@@ -37,7 +37,10 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-
+.cards-wrap {
+  width: 100%;
+  height: 100%;
+}
 </style>
 
 
