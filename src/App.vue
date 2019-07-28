@@ -2,8 +2,20 @@
 	<div id="app">
 		<section class="panel">
 			<button class="button" @click="onClickNewGame">Restart</button>
-			<button class="button" @click="onClickUndo">Undo</button>
-      <button class="button" @click="onClickRedo">Redo</button>
+			<button
+        class="button"
+        :class="{'is-disabled': isUndoBtnDisabled}"
+        :disabled="isUndoBtnDisabled"
+        @click="onClickXxdo(-1)">
+        Undo
+      </button>
+      <button
+        class="button"
+        :class="{'is-disabled': isRedoBtnDisabled}"
+        :disabled="isRedoBtnDisabled"
+        @click="onClickXxdo(1)">
+        Redo
+      </button>
 		</section>
 		<section class="deck">
 			<div class="top-deck">
@@ -52,10 +64,10 @@
 							@drag="onDragCard"
 						/>
 					</cards-column>
-				</div>
+				</div>        
 			</div>
       <div v-else class="main-deck finish-congratulations">WELL DONE!</div>
-		</section>
+    </section>
 	</div>
 </template>
 
@@ -82,7 +94,9 @@ export default {
 			mainDeck: [[], [], [], [], [], [], [], []],
 			tempDeck: ["", "", "", ""],
       finishDeck: ["", "", "", ""],
+      timer: 0,
       moves: 0,
+      screenshot: [],
 
 			// 拖曳標的
 			target: {
@@ -91,19 +105,30 @@ export default {
 				columnIndex: 0,
 				children: []
 			},
-			timer: 0,
-			screenshot: []
 		};
 	},
 	computed: {
     isGameFinished() {
-      return this.finishDeck.every((item) => {
-        return item.includes('13');
-      })
-    }
+      return this.finishDeck.every((item) => item.includes('13'));
+    },
+    sliceMainDeck() {
+      return this.mainDeck.map((column) => column.slice());
+    },
+    sliceTempDeck() {
+      return this.tempDeck.slice();
+    },
+    sliceFinishDeck() {
+      return this.finishDeck.slice();
+    },
+    isUndoBtnDisabled() {
+      return this.moves <= 0;
+    },
+    isRedoBtnDisabled() {
+      return this.moves >= this.screenshot.length - 1;
+    },
   },
 	methods: {
-		// main game logic
+    // main game logic
 		onDragCard(cardId, cardIndex, columnIndex) {
 			this.target.cardId = cardId;
 			this.target.cardIndex = cardIndex;
@@ -128,7 +153,7 @@ export default {
 				this.tempDeck[this.target.cardIndex] = "";
 			} else if (this.target.columnIndex <= 7) {
 				this.mainDeck[this.target.columnIndex].pop();
-			}
+      }
 			this.resetTarget();
 		},
 		onDropFinishBlock(i) {
@@ -195,7 +220,15 @@ export default {
       this.target.children = [];
       
       this.moves += 1;
-		},
+      this.takeScreenshot();
+    },
+    takeScreenshot() {
+      this.screenshot.push({
+        mainDeck: this.sliceMainDeck,
+        tempDeck: this.sliceTempDeck,
+        finishDeck: this.sliceFinishDeck,
+      });
+    },
 
 		// panel click
 		onClickNewGame() {
@@ -203,6 +236,7 @@ export default {
 			this.mainDeck = [[], [], [], [], [], [], [], []];
 			this.tempDeck = ["", "", "", ""];
       this.finishDeck = ["", "", "", ""];
+      this.screenshot = [];
       this.moves = 0;
 
 			let cards = [];
@@ -230,10 +264,24 @@ export default {
 				} else {
 					this.mainDeck[0].push(this.shuffledCards[i]);
 				}
-			}
+      }
+      this.takeScreenshot();
 		},
-    onClickUndo() {},
-    onClickRedo() {},
+    onClickXxdo(direction) {
+      this.moves += direction;
+
+      if (this.moves < 0 || this.moves > this.screenshot.length - 1) return;
+
+      // this.mainDeck = [];
+			this.tempDeck = [];
+      this.finishDeck = [];
+
+      this.tempDeck.push(...this.screenshot[this.moves].tempDeck);
+      this.finishDeck.push(...this.screenshot[this.moves].finishDeck);
+      for (let columnIndex in this.mainDeck) {
+        this.$set(this.mainDeck, columnIndex, this.screenshot[this.moves].mainDeck[columnIndex]);
+      }
+    },
 
 		// some utils methods
 		isDraggable(cardIndex, columnIndex) {
