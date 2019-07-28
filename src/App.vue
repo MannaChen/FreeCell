@@ -134,7 +134,7 @@ export default {
 			this.target.cardIndex = cardIndex;
 			this.target.columnIndex = columnIndex;
 
-			if (columnIndex >= this.tempDeckColumnIndex) return;
+			if (columnIndex >= 8) return;
 
 			let i = cardIndex;
 			const column = this.mainDeck[columnIndex];
@@ -148,39 +148,68 @@ export default {
 			if (this.tempDeck[i]) return;
 			if (this.target.children.length >= 1) return;
 
-      this.$set(this.tempDeck, i, this.target.cardId);
-      
-      this.removeDraggedCards(columnIndex);
+			this.$set(this.tempDeck, i, this.target.cardId);
+			if (this.target.columnIndex === 8) {
+				this.tempDeck[this.target.cardIndex] = "";
+			} else if (this.target.columnIndex <= 7) {
+				this.mainDeck[this.target.columnIndex].pop();
+      }
 			this.resetTarget();
 		},
 		onDropFinishBlock(i) {
 			if (this.target.children.length >= 1) return;
 
-			const a = this.finishDeck[i];
-			const b = this.target.cardId;
+			const card1 = this.finishDeck[i];
+			const card2 = this.target.cardId;
 
 			if (
-				this.isFinishSerializable(a, b) ||
-				(this.getCardNumber(this.target.cardId) === 1 && !this.finishDeck[i])
+				(this.isSameCardType(card1, card2) &&
+					this.isAscendentCardNumber(card1, card2)) ||
+				(this.target.cardId.split("-")[1] === "1" && !this.finishDeck[i])
 			) {
 				this.$set(this.finishDeck, i, this.target.cardId);
-        this.removeDraggedCards(this.target.columnIndex);
+				if (this.target.columnIndex === 8) {
+					this.tempDeck[this.target.cardIndex] = "";
+				} else if (this.target.columnIndex <= 7) {
+					this.mainDeck[this.target.columnIndex].pop();
+				}
 			}
 			this.resetTarget();
 		},
 		onDropCardColumn(columnIndex) {
       
       const length = this.mainDeck[columnIndex].length;
+      
       if (length > 0) {
 
 				const endCardId = this.mainDeck[columnIndex][length - 1];
-        if (this.isColumnSerializable(endCardId, this.target.cardId))
-          this.removeDraggedCards(columnIndex);
-        this.mainDeck[columnIndex].push(this.target.cardId, ...this.target.children);
-        
-			} else if (length === 0 && this.getCardNumber(this.target.cardId) === 13) {
-        this.removeDraggedCards(columnIndex);
-        this.mainDeck[columnIndex].push(this.target.cardId, ...this.target.children);
+				if (
+					this.isDiffCardColor(endCardId, this.target.cardId) &&
+					this.isDescentCardNumber(endCardId, this.target.cardId)
+				) {
+					if (this.target.columnIndex === 8) {
+						this.tempDeck[this.target.cardIndex] = "";
+					} else if (this.target.columnIndex <= 7) {
+						this.mainDeck[this.target.columnIndex].splice(
+							this.target.cardIndex
+						);
+					}
+					this.mainDeck[columnIndex].push(
+						this.target.cardId,
+						...this.target.children
+					);
+				}
+			} else if (length === 0 && this.target.cardId.includes("13")) {
+				console.log("13");
+				if (this.target.columnIndex === 8) {
+					this.tempDeck[this.target.cardIndex] = "";
+				} else if (this.target.columnIndex <= 7) {
+					this.mainDeck[this.target.columnIndex].splice(this.target.cardIndex);
+				}
+				this.mainDeck[columnIndex].push(
+					this.target.cardId,
+					...this.target.children
+				);
 			}
 			this.resetTarget();
 		},
@@ -217,7 +246,7 @@ export default {
 				}
 			});
 			this.shuffledCards = this.shuffle(cards);
-			for (let i in cards) {
+			for (let i = 0; i < 52; i++) {
 				if (i >= 46) {
 					this.mainDeck[7].push(this.shuffledCards[i]);
 				} else if (i >= 40) {
@@ -261,8 +290,8 @@ export default {
 			// 是否有子牌
 			while (column[i + 1] !== undefined) {
 				if (
-					this.isDiffColor(column[i], column[i + 1]) &&
-					this.isDescentNumber(column[i], column[i + 1])
+					this.isDiffCardColor(column[i], column[i + 1]) &&
+					this.isDescentCardNumber(column[i], column[i + 1])
 				) {
 					i += 1;
 				} else {
@@ -275,42 +304,23 @@ export default {
 		isSameCardType(a, b) {
 			return a.split("-")[0] === b.split("-")[0];
 		},
-		isAscendentNumber(a, b) {
+		isAscendentCardNumber(a, b) {
 			return parseInt(a.split("-")[1]) === parseInt(b.split("-")[1]) - 1;
 		},
-		isDescentNumber(a, b) {
+		isDescentCardNumber(a, b) {
 			return parseInt(a.split("-")[1]) === parseInt(b.split("-")[1]) + 1;
 		},
-		isDiffColor(a, b) {
+		isDiffCardColor(a, b) {
 			const aColor =
-				this.getCardType(a) === "heart" || this.getCardType(a) === "diamond"
+				a.split("-")[0] === "heart" || a.split("-")[0] === "diamond"
 					? "red"
 					: "black";
 			const bColor =
-				this.getCardType(b) === "heart" || this.getCardType(b) === "diamond"
+				b.split("-")[0] === "heart" || b.split("-")[0] === "diamond"
 					? "red"
 					: "black";
 			return aColor !== bColor;
-    },
-    isColumnSerializable(a, b) {
-      return this.isDiffColor(a, b) && this.isDescentNumber(a, b);
-    },
-    isFinishSerializable(a, b) {
-      return this.isSameCardType(a, b) && this.isAscendentNumber(a, b);
-    },
-    removeDraggedCards(columnIndex) {
-      if (this.target.columnIndex === this.tempDeckColumnIndex) {
-        this.tempDeck[this.target.cardIndex] = "";
-      } else {
-        this.mainDeck[this.target.columnIndex].splice(this.target.cardIndex);
-      }
-    },
-    getCardType(cardId) {
-      return cardId.split('-')[0];
-    },
-    getCardNumber(cardId) {
-      return parseInt(cardId.split('-')[1]);
-    },
+		},
 		allowDrop(e) {
 			e.preventDefault();
 		},
