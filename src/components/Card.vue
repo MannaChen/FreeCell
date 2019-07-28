@@ -1,8 +1,10 @@
 <template>
   <img
     class="card-image"
+		:class="{'is-dragging': isDragging}"
     draggable
     @dragstart="drag"
+		@dragend="isDragging = false"
     :id="cardId"
     :src="require(`@/assets/card-${cardId}.svg`)"
     alt="cardId">
@@ -23,20 +25,16 @@ export default {
       type: Number,
       default: -1,
     },
-    // isDraggable: {
-    //   type: Boolean,
-    //   default: false,
-    // }
   },
   data() {
     return {
+	    isDragging: false,
     }
   },
   methods: {
-    drag() {
-      // if (this.isDraggable) {
+    drag(e) {
+    	this.isDragging = true;
       this.$emit('drag', this.cardId, this.cardIndex, this.columnIndex);
-      // };
     },
   },
 }
@@ -45,7 +43,10 @@ export default {
 <style lang="scss" scoped>
 .card-image {
   width: 100%;
-  height: 231.7px;
+	height: 231.7px;
+	&.is-dragging {
+		filter: invert(1);
+	}
   &:not(:first-child) {
     margin-top: -196px;
   }
