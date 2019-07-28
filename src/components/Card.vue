@@ -5,7 +5,6 @@
     draggable
     @dragstart="drag"
 		@dragend="isDragging = false"
-    :id="cardId"
     :src="require(`@/assets/card-${cardId}.svg`)"
     alt="cardId">
 </template>
